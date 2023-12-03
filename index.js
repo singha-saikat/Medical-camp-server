@@ -96,6 +96,12 @@ async function run() {
       
       res.send(result);
     });
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await usersCollection.findOne(query);
+      res.send(result);
+    });
 
     app.delete('/delete-camp/:id',  async (req, res) => {
       const id = req.params;
@@ -130,6 +136,43 @@ async function run() {
   
 
       const result = await campCollection.updateOne(filter, updateOperation)
+      res.send(result);
+    })
+    app.post('/addACamp', async (req, res) => {
+      const camp = req.body;
+      const result = await campCollection.insertOne(camp);
+      res.send(result);
+    })
+    app.patch('/update-participant-profile', async (req, res) => {
+      const { name, email, attendedCamps, medicalInterests } = req.body;
+      const emailMatch = req.query;
+      const updatedFields = {
+        name: name,
+        email: email,
+        attendedCamps: attendedCamps,
+        medicalInterests: medicalInterests,
+      };
+      const updateOperation = {
+        $set: updatedFields,
+      };
+      const result = await usersCollection.updateOne(emailMatch, updateOperation)
+      res.send(result);
+    })
+    app.patch('/update-healthcare-professional-profile', async (req, res) => {
+      const { name, email, medicalSpecialty, certifications,contactInformation,impact } = req.body;
+      const emailMatch = req.query;
+      const updatedFields = {
+        name: name,
+        email: email,
+        medicalSpecialty: medicalSpecialty,
+        certifications: certifications,
+        contactInformation:contactInformation,
+        impact:impact
+      };
+      const updateOperation = {
+        $set: updatedFields,
+      };
+      const result = await usersCollection.updateOne(emailMatch, updateOperation)
       res.send(result);
     })
 
