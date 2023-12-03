@@ -97,6 +97,42 @@ async function run() {
       res.send(result);
     });
 
+    app.delete('/delete-camp/:id',  async (req, res) => {
+      const id = req.params;
+      const query = { _id: new ObjectId(id) }
+      const result = await campCollection.deleteOne(query);
+      console.log(result);
+      res.send(result);
+    })
+
+    app.patch('/update-camp/:id', async (req, res) => {
+      const camp = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const updatedFields = {
+        name: camp.name,
+        image: camp.image,
+        fees:camp.camp_fees,
+        dateTime: camp.dateTime,
+        location: camp.location,
+        services: camp.services,
+        professionals: camp.professionals,
+        audience: camp.audience,
+        participantCount: camp.participantCount,
+        comprehensiveDetails: camp.comprehensiveDetails,
+        moreDetails: camp.moreDetails
+      };
+  
+
+      const updateOperation = {
+        $set: updatedFields,
+      };
+  
+
+      const result = await campCollection.updateOne(filter, updateOperation)
+      res.send(result);
+    })
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
