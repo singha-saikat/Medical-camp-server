@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 4000;
@@ -21,7 +22,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const campCollection = client.db("MedicalCamp").collection("campData");
     const reviewsCollection = client.db("MedicalCamp").collection("reviews");
@@ -32,7 +33,32 @@ async function run() {
       .db("MedicalCamp")
       .collection("joinCampData");
     const usersCollection = client.db("MedicalCamp").collection("users");
+    const contactInfoCollection = client.db("MedicalCamp").collection("contactInfo");
 
+
+    const verifyToken = (req, res, next) => {
+      console.log('inside verify token', req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next();
+      })
+    }
+
+
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+      res.send({ token });
+    })
+    
+    
     app.get("/availableCamp", async (req, res) => {
       const result = await campCollection.find().toArray();
       res.send(result);
@@ -88,15 +114,17 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/role/:email", async (req, res) => {
+    app.get("/users/role/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
-
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
       const query = { email: email };
       const result = await usersCollection.findOne(query);
       
       res.send(result);
     });
-    app.get("/users/:email", async (req, res) => {
+    app.get("/users/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await usersCollection.findOne(query);
@@ -176,10 +204,16 @@ async function run() {
       res.send(result);
     })
 
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    app.post('/contact-info', async (req, res) => {
+      const info = req.body;
+      const result = await contactInfoCollection.insertOne(info);
+      res.send(result);
+    })
+
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
