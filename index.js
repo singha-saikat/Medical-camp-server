@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 4000;
@@ -33,32 +33,33 @@ async function run() {
       .db("MedicalCamp")
       .collection("joinCampData");
     const usersCollection = client.db("MedicalCamp").collection("users");
-    const contactInfoCollection = client.db("MedicalCamp").collection("contactInfo");
-
+    const contactInfoCollection = client
+      .db("MedicalCamp")
+      .collection("contactInfo");
 
     const verifyToken = (req, res, next) => {
-      console.log('inside verify token', req.headers.authorization);
+      console.log("inside verify token", req.headers.authorization);
       if (!req.headers.authorization) {
-        return res.status(401).send({ message: 'unauthorized access' });
+        return res.status(401).send({ message: "unauthorized access" });
       }
-      const token = req.headers.authorization.split(' ')[1];
+      const token = req.headers.authorization.split(" ")[1];
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-          return res.status(401).send({ message: 'unauthorized access' })
+          return res.status(401).send({ message: "unauthorized access" });
         }
         req.decoded = decoded;
         next();
-      })
-    }
+      });
+    };
 
-
-    app.post('/jwt', async (req, res) => {
+    app.post("/jwt", async (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
       res.send({ token });
-    })
-    
-    
+    });
+
     app.get("/availableCamp", async (req, res) => {
       const result = await campCollection.find().toArray();
       res.send(result);
@@ -114,39 +115,39 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/role/:email",verifyToken, async (req, res) => {
+    app.get("/users/role/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
-        return res.status(403).send({ message: 'forbidden access' })
+        return res.status(403).send({ message: "forbidden access" });
       }
       const query = { email: email };
       const result = await usersCollection.findOne(query);
-      
+
       res.send(result);
     });
-    app.get("/users/:email",verifyToken, async (req, res) => {
+    app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await usersCollection.findOne(query);
       res.send(result);
     });
 
-    app.delete('/delete-camp/:id',  async (req, res) => {
+    app.delete("/delete-camp/:id", async (req, res) => {
       const id = req.params;
-      const query = { _id: new ObjectId(id) }
+      const query = { _id: new ObjectId(id) };
       const result = await campCollection.deleteOne(query);
       console.log(result);
       res.send(result);
-    })
+    });
 
-    app.patch('/update-camp/:id', async (req, res) => {
+    app.patch("/update-camp/:id", async (req, res) => {
       const camp = req.body;
       const id = req.params.id;
-      const filter = { _id: new ObjectId(id) }
+      const filter = { _id: new ObjectId(id) };
       const updatedFields = {
         name: camp.name,
         image: camp.image,
-        fees:camp.camp_fees,
+        fees: camp.camp_fees,
         dateTime: camp.dateTime,
         location: camp.location,
         services: camp.services,
@@ -154,24 +155,22 @@ async function run() {
         audience: camp.audience,
         participantCount: camp.participantCount,
         comprehensiveDetails: camp.comprehensiveDetails,
-        moreDetails: camp.moreDetails
+        moreDetails: camp.moreDetails,
       };
-  
 
       const updateOperation = {
         $set: updatedFields,
       };
-  
 
-      const result = await campCollection.updateOne(filter, updateOperation)
+      const result = await campCollection.updateOne(filter, updateOperation);
       res.send(result);
-    })
-    app.post('/addACamp', async (req, res) => {
+    });
+    app.post("/addACamp", async (req, res) => {
       const camp = req.body;
       const result = await campCollection.insertOne(camp);
       res.send(result);
-    })
-    app.patch('/update-participant-profile', async (req, res) => {
+    });
+    app.patch("/update-participant-profile", async (req, res) => {
       const { name, email, attendedCamps, medicalInterests } = req.body;
       const emailMatch = req.query;
       const updatedFields = {
@@ -183,32 +182,79 @@ async function run() {
       const updateOperation = {
         $set: updatedFields,
       };
-      const result = await usersCollection.updateOne(emailMatch, updateOperation)
+      const result = await usersCollection.updateOne(
+        emailMatch,
+        updateOperation
+      );
       res.send(result);
-    })
-    app.patch('/update-healthcare-professional-profile', async (req, res) => {
-      const { name, email, medicalSpecialty, certifications,contactInformation,impact } = req.body;
+    });
+    app.patch("/update-healthcare-professional-profile", async (req, res) => {
+      const {
+        name,
+        email,
+        medicalSpecialty,
+        certifications,
+        contactInformation,
+        impact,
+      } = req.body;
       const emailMatch = req.query;
       const updatedFields = {
         name: name,
         email: email,
         medicalSpecialty: medicalSpecialty,
         certifications: certifications,
-        contactInformation:contactInformation,
-        impact:impact
+        contactInformation: contactInformation,
+        impact: impact,
       };
       const updateOperation = {
         $set: updatedFields,
       };
-      const result = await usersCollection.updateOne(emailMatch, updateOperation)
+      const result = await usersCollection.updateOne(
+        emailMatch,
+        updateOperation
+      );
       res.send(result);
-    })
+    });
 
-    app.post('/contact-info', async (req, res) => {
+    app.post("/contact-info", async (req, res) => {
       const info = req.body;
       const result = await contactInfoCollection.insertOne(info);
       res.send(result);
-    })
+    });
+
+    app.get("/registeredCamp/:email", verifyToken, async (req, res) => {
+      try {
+        const email = req.params.email;
+        const query = { email: email };
+        const result = await joinCampCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+    app.get("/feedback-and-ratings/:email", verifyToken, async (req, res) => {
+      try {
+        const email = req.params.email;
+        const query = { email: email };
+        const result = await joinCampCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+
+    app.post("/reviews", async (req, res) => {
+      try {
+        const fromData = req.body;
+        console.log(req.body);
+        const result = await reviewsCollection.insertOne(fromData);
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+      }
+    });
 
     // await client.db("admin").command({ ping: 1 });
     // console.log(
